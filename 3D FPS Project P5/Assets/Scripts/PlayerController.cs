@@ -5,8 +5,13 @@ using UnityEngine;
 public class PlayerController : MonoBehaviour
 {
     public float moveSpeed = 1f;
+    public float jumpForce = 10f;
+    public float gravityModifier = 1f;
     public float mouseSensitivity = 1f;
     public Transform theCamera;
+    public Transform groundCheckpoint;
+    public LayerMask whatIsGround;
+    private bool _canPlayerJump;
     private Vector3 _moveInput;
     private CharacterController _characterController;
 
@@ -19,11 +24,40 @@ public class PlayerController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        //Player movement
-        _moveInput.x = Input.GetAxis("Horizontal") * moveSpeed * Time.deltaTime;
-        _moveInput.z = Input.GetAxis("Vertical") * moveSpeed * Time.deltaTime;
+        //Player jump setup
+        float yVelocity = _moveInput.y;
 
-        _characterController.Move(_moveInput);
+        //Player movement
+        //_moveInput.x = Input.GetAxis("Horizontal") * moveSpeed * Time.deltaTime;
+        //_moveInput.z = Input.GetAxis("Vertical") * moveSpeed * Time.deltaTime;
+
+        Vector3 forwardDirection = transform.forward * Input.GetAxis("Vertical");
+        Vector3 horizontalDirection = transform.right * Input.GetAxis("Horizontal");
+
+        _moveInput = (forwardDirection + horizontalDirection).normalized;
+        _moveInput *= moveSpeed;
+
+        //Apply Jumping
+        _moveInput.y = yVelocity;
+
+        _moveInput.y += Physics.gravity.y * gravityModifier * Time.deltaTime;
+
+        //Check if character controller is on the ground
+        if(_characterController.isGrounded)
+        {
+            _moveInput.y = Physics.gravity.y * gravityModifier * Time.deltaTime;
+        }
+
+        //Check if player can jump
+        _canPlayerJump = Physics.OverlapSphere(groundCheckpoint.position, 0.5f, whatIsGround).Length > 0;
+
+        //Make player jump
+        if(Input.GetKeyDown(KeyCode.Space) && _canPlayerJump)
+        {
+            _moveInput.y = jumpForce;
+        }
+
+        _characterController.Move(_moveInput * Time.deltaTime);
 
         //Camera rotation
         Vector2 mouseInput = new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * mouseSensitivity;
